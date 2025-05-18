@@ -1,0 +1,115 @@
+.gauge-container {
+  background-color: rgba(17, 24, 39, 0.7);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.gauge-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(247, 147, 26, 0.2) 0%, transparent 70%);
+  z-index: 1;
+  opacity: 0.3;
+}
+
+.gauge-container:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: rgba(247, 147, 26, 0.3);
+}
+
+/* Tamanhos de contêiner */
+.gauge-small {
+  max-width: 220px;
+  min-height: 260px;
+}
+
+.gauge-medium {
+  max-width: 300px;
+  min-height: 340px;
+}
+
+.gauge-large {
+  max-width: 380px;
+  min-height: 420px;
+}
+
+.gauge-title {
+  margin-bottom: 12px;
+  text-align: center;
+  position: relative;
+}
+
+.gauge-title h3 {
+  margin: 0;
+  font-weight: 600;
+  color: #f7f7f7;
+}
+
+.gauge-title-small h3 {
+  font-size: 1rem;
+}
+
+.gauge-title-medium h3 {
+  font-size: 1.25rem;
+}
+
+.gauge-title-large h3 {
+  font-size: 1.5rem;
+}
+
+.timeframe-badge {
+  background-color: #f7931a;
+  color: #111827;
+  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  display: inline-block;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+.chart-wrapper {
+  position: relative;
+  z-index: 2;
+}
+
+.gauge-classification {
+  text-align: center;
+  font-weight: 600;
+  margin-top: 10px;
+  font-size: 1.125rem;
+}
+
+.gauge-observation {
+  margin-top: 8px;
+  font-size: 0.875rem;
+  color: #9ca3af;
+  text-align: center;
+  padding: 0 10px;
+  font-style: italic;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .gauge-medium, .gauge-large {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .gauge-small {
+    max-width: 100%;
+  }
+}
