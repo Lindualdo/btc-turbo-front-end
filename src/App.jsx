@@ -1,18 +1,21 @@
 import { useEffect } from 'react'
 import './styles/App.css'
-import BTCTendenciaPanel from './components/BTCTendenciaPanel'
+import BTCTendenciaPanel from './components/BTCTendenciaPanel/BTCTendenciaPanel'
+import logger from './utils/logger'
 
 function App() {
   useEffect(() => {
+    logger.info('App montado - inicializando dashboard...');
+    
     // Register Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
+        navigator.serviceWorker.register('/sw.js')
           .then(registration => {
-            console.log('SW registered: ', registration)
+            logger.info('SW registrado com sucesso:', registration)
           })
           .catch(registrationError => {
-            console.log('SW registration failed: ', registrationError)
+            logger.error('SW falha no registro:', registrationError)
           })
       })
     }
