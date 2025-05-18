@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './BTCTendenciaPanel.css';
 import GaugeChart from '../GaugeChart';
+import logger from '../../utils/logger';
 
 // Constantes para os timeframes
 const TIMEFRAMES = {
@@ -24,11 +25,13 @@ const BTCTendenciaPanel = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
+      logger.info('Buscando dados de análise técnica...');
       const response = await axios.get('https://btc-turbo-api-production.up.railway.app/api/v1/analise-tecnica-emas');
+      logger.debug('Dados recebidos:', response.data);
       setData(response.data);
       setError(null);
     } catch (err) {
-      console.error('Erro ao buscar dados de tendência:', err);
+      logger.error('Erro ao buscar dados de tendência:', err);
       setError('Falha ao carregar dados de tendência. Por favor, tente novamente.');
     } finally {
       setLoading(false);
@@ -76,6 +79,11 @@ const BTCTendenciaPanel = () => {
     );
   }
 
+  logger.renderLog('BTCTendenciaPanel', { 
+    timeframes: Object.keys(selectedTimeframes).filter(k => selectedTimeframes[k]),
+    hasData: !!data 
+  });
+
   // Renderizar painel principal com os dados
   return (
     <div className="btc-tendencia-panel">
@@ -121,7 +129,7 @@ const BTCTendenciaPanel = () => {
           score={data?.consolidado.score || 0}
           title="Tendência Bitcoin Consolidada"
           classification={data?.consolidado.classificacao || ""}
-          observation={data?.consolidado.racional || ""}
+          observacao={data?.consolidado.racional || ""}
           size="large"
         />
       </div>
@@ -138,7 +146,7 @@ const BTCTendenciaPanel = () => {
                 title={`Score de Tendência`}
                 timeframe={TIMEFRAMES[timeframe]}
                 classification={data.emas[timeframe].analise.classificacao || ""}
-                observation={data.emas[timeframe].analise.observacao || ""}
+                observacao={data.emas[timeframe].analise.observacao || ""}
                 size="medium"
               />
             )
