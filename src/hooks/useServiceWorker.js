@@ -1,50 +1,81 @@
 import { useState, useEffect } from 'react';
+import { registerServiceWorker, checkForUpdates, forcePageReload } from '../utils/pwaUtils';
 
-export const useServiceWorker = () => {
-  const [isReady, setIsReady] = useState(false);
-  const [registration, setRegistration] = useState(null);
-  const [updateAvailable, setUpdateAvailable] = useState(false);
+const useServiceWorker = () => {
+  const [waitingWorker, setWaitingWorker] = useState(null);
+  const [newVersionAvailable, setNewVersionAvailable] = useState(false);
+  const [registrationError, setRegistrationError] = useState(null);
+  const [updateStatus, setUpdateStatus] = useState('idle'); // 'idle' | 'checking' | 'available' | 'updating'
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      // Register service worker
-      navigator.serviceWorker
-        .register('/service-worker.js')
-        .then((reg) => {
-          setRegistration(reg);
-          setIsReady(true);
+    const onServiceWorkerUpdate = (registration) => {
+      setWaitingWorker(registration.waiting);
+      setNewVersionAvailable(true);
+      setUpdateStatus('available');
+    };
 
-          // Check for updates
-          reg.addEventListener('updatefound', () => {
-            const newWorker = reg.installing;
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                setUpdateAvailable(true);
-              }
-            });
-          });
-        })
-        .catch((error) => {
-          console.error('Service Worker registration failed:', error);
+    const registerSW = async () => {
+      try {
+        const registration = await registerServiceWorker();
+        
+        // Verifica se já existe uma versão esperando para ser ativada
+        if (registration?.waiting) {
+          setWaitingWorker(registration.waiting);
+          setNewVersionAvailable(true);
+          setUpdateStatus('available');
+        }
+
+        // Listener para mudanças no controller (quando uma nova versão é ativada)
+        registration?.addEventListener('controllerchange', () => {
+          setUpdateStatus('updating');
+          window.location.reload();
         });
 
-      // Listen for controller change
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        window.location.reload();
-      });
-    }
+      } catch (error) {
+        console.error('Service Worker registration failed:', error);
+        setRegistrationError(error.message);
+      }
+    };
+
+    registerSW();
+
+    // Verifica atualizações periodicamente
+    const updateCheckInterval = setInterval(() => {
+      setUpdateStatus('checking');
+      checkForUpdates()
+        .then(() => setUpdateStatus('idle'))
+        .catch((error) => {
+          console.error('Update check failed:', error);
+          setUpdateStatus('idle');
+        });
+    }, 60 * 60 * 1000); // Verifica a cada hora
+
+    return () => {
+      clearInterval(updateCheckInterval);
+    };
   }, []);
 
-  const update = () => {
-    if (registration && registration.waiting) {
-      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+  const updateServiceWorker = () => {
+    if (!waitingWorker) return;
+
+    try {
+      setUpdateStatus('updating');
+      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+      setNewVersionAvailable(false);
+      forcePageReload();
+    } catch (error) {
+      console.error('Failed to update service worker:', error);
+      setUpdateStatus('available');
     }
   };
 
   return {
-    isReady,
-    updateAvailable,
-    update,
+    newVersionAvailable,
+    updateServiceWorker,
+    registrationError,
+    updateStatus,
+    isUpdating: updateStatus === 'updating',
+    isChecking: updateStatus === 'checking'
   };
 };
 
