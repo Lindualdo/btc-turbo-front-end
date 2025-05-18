@@ -24,12 +24,18 @@ const GaugeChart = ({
       score, title, timeframe, size,
       chartType: 'radialBar',
       apexChartsLoaded: typeof ReactApexChart !== 'undefined',
-      chartRefExists: chartRef.current !== null
+      chartRefExists: chartRef.current !== null,
+      apexGlobalObject: typeof window.ApexCharts !== 'undefined'
     });
 
     // Verificar se a biblioteca está disponível
     if (typeof ReactApexChart === 'undefined') {
       logger.error('ReactApexChart não está disponível');
+    }
+
+    // Verificar se o objeto global ApexCharts está disponível
+    if (typeof window.ApexCharts === 'undefined') {
+      logger.error('Objeto global ApexCharts não está disponível');
     }
 
     // Verificar se o score está no formato correto
@@ -49,7 +55,7 @@ const GaugeChart = ({
     if (score >= 5) return '#84cc16'; // Verde claro para tendência de alta moderada
     if (score >= 3) return '#f59e0b'; // Amarelo para neutro/indefinido
     if (score >= 1) return '#f97316'; // Laranja para tendência de baixa moderada
-    return '#ef4444';           // Vermelho para tendência de baixa forte
+    return '#ef4444';             // Vermelho para tendência de baixa forte
   };
 
   // Configura as opções do gráfico
@@ -145,8 +151,21 @@ const GaugeChart = ({
   // Log para debug com o valor da série e opções
   logger.debug('GaugeChart config:', { series, color: getColor(score), options });
 
+  // Se o chart não puder ser renderizado, mostrar uma versão simplificada como fallback
+  const renderFallbackChart = () => {
+    return (
+      <div className="fallback-chart">
+        <div className="fallback-score" style={{ color: getColor(score) }}>
+          {score.toFixed(1)}
+        </div>
+        <div className="fallback-title">{title}</div>
+        {classificacao && <div className="fallback-classificacao">{classificacao}</div>}
+      </div>
+    );
+  };
+
   // Fallback para evitar erros em caso de problemas com a biblioteca
-  if (typeof ReactApexChart === 'undefined') {
+  if (typeof ReactApexChart === 'undefined' || typeof window.ApexCharts === 'undefined') {
     return (
       <div className={containerClass} ref={chartRef}>
         <div className={titleClass}>
@@ -155,8 +174,8 @@ const GaugeChart = ({
         </div>
         <div className="chart-wrapper error-state">
           <div className="chart-error">
-            Erro ao carregar o gráfico
-            <p>Score: {score}/10</p>
+            {renderFallbackChart()}
+            <p className="error-message">Erro ao carregar o gráfico</p>
           </div>
         </div>
       </div>
@@ -170,29 +189,34 @@ const GaugeChart = ({
     </div>
   ) : null;
 
-  return (
-    <div className={containerClass} ref={chartRef}>
-      <div className={titleClass}>
-        {timeframe && <span className="timeframe-badge">{timeframe}</span>}
-        {title && <h3>{title}</h3>}
-      </div>
-      <div className="chart-wrapper">
-        <ReactApexChart 
-          options={options} 
-          series={series} 
-          type="radialBar" 
-          height={size === 'small' ? 180 : size === 'medium' ? 240 : 300}
-        />
-      </div>
-      {classificacao && (
-        <div className="gauge-classificacao">
-          <span style={{ color: getColor(score) }}>{classificacao}</span>
+  try {
+    return (
+      <div className={containerClass} ref={chartRef}>
+        <div className={titleClass}>
+          {timeframe && <span className="timeframe-badge">{timeframe}</span>}
+          {title && <h3>{title}</h3>}
         </div>
-      )}
-      {observacao && <div className="gauge-observacao">{observacao}</div>}
-      {debugElement}
-    </div>
-  );
+        <div className="chart-wrapper">
+          <ReactApexChart 
+            options={options} 
+            series={series} 
+            type="radialBar" 
+            height={size === 'small' ? 180 : size === 'medium' ? 240 : 300}
+          />
+        </div>
+        {classificacao && (
+          <div className="gauge-classificacao">
+            <span style={{ color: getColor(score) }}>{classificacao}</span>
+          </div>
+        )}
+        {observacao && <div className="gauge-observacao">{observacao}</div>}
+        {debugElement}
+      </div>
+    );
+  } catch (error) {
+    logger.error('Erro ao renderizar o GaugeChart:', error);
+    return renderFallbackChart();
+  }
 };
 
 export default GaugeChart;
