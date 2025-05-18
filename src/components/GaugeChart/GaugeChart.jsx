@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import './GaugeChart.css';
+import logger from '../../utils/logger';
 
 const GaugeChart = ({ 
   score, 
   title, 
   classification, 
-  observation,
+  observacao,
   timeframe,
   size = 'medium'  // 'small', 'medium', 'large'
 }) => {
@@ -14,13 +15,16 @@ const GaugeChart = ({
   const containerClass = `gauge-container gauge-${size}`;
   const titleClass = `gauge-title gauge-title-${size}`;
   
+  // Log quando o componente recebe novas props
+  logger.debug('GaugeChart renderizado:', { score, title, timeframe, size });
+  
   // Define as cores com base no score
   const getColor = (score) => {
     if (score >= 7) return '#22c55e'; // Verde para tendência de alta forte
     if (score >= 5) return '#84cc16'; // Verde claro para tendência de alta moderada
     if (score >= 3) return '#f59e0b'; // Amarelo para neutro/indefinido
     if (score >= 1) return '#f97316'; // Laranja para tendência de baixa moderada
-    return '#ef4444';               // Vermelho para tendência de baixa forte
+    return '#ef4444';             // Vermelho para tendência de baixa forte
   };
 
   // Configura as opções do gráfico
@@ -119,7 +123,7 @@ const GaugeChart = ({
           <span style={{ color: getColor(score) }}>{classification}</span>
         </div>
       )}
-      {observation && <div className="gauge-observation">{observation}</div>}
+      {observacao && <div className="gauge-observacao">{observacao}</div>}
     </div>
   );
 };
