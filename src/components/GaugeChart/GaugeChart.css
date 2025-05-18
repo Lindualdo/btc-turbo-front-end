@@ -124,6 +124,39 @@
   color: #f7f7f7;
 }
 
+.error-message {
+  margin-top: 12px;
+  font-size: 0.875rem;
+  color: #ef4444;
+}
+
+/* Fallback chart for when ApexCharts fails */
+.fallback-chart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.fallback-score {
+  font-size: 3rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.fallback-title {
+  font-size: 1.25rem;
+  margin-bottom: 5px;
+  color: #e5e7eb;
+}
+
+.fallback-classificacao {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 5px;
+}
+
 /* Debug info */
 .debug-info {
   margin-top: 10px;
@@ -146,4 +179,11 @@
   .gauge-small {
     max-width: 100%;
   }
+}
+
+/* Wrapper for gauge charts */
+.gauge-wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
