@@ -1,17 +1,47 @@
 /* App.css - Estilos específicos para o componente App */
 
+/* Variáveis de cor específicas para Bitcoin */
+:root {
+  --btc-orange: #f7931a;
+  --btc-orange-light: #ffb74d;
+  --btc-orange-dark: #c77700;
+  --dark-bg: #0f1116;
+  --dark-panel: #1e2128;
+  --dark-card: #272b34;
+  --text-light: #f7f7f7;
+  --text-muted: #9ca3af;
+  --border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Utilidades de cor para Bitcoin */
+.text-btc-orange {
+  color: var(--btc-orange);
+}
+
+.bg-btc-orange {
+  background-color: var(--btc-orange);
+}
+
+.border-btc-orange {
+  border-color: var(--btc-orange);
+}
+
+/* Container principal */
 .app-container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: var(--dark-bg);
 }
 
+/* Cabeçalho do dashboard */
 .dashboard-header {
   padding: 1rem;
   background-color: rgba(20, 20, 20, 0.8);
-  border-bottom: 2px solid var(--primary-color);
+  border-bottom: 2px solid var(--btc-orange);
 }
 
+/* Conteúdo principal */
 .dashboard-content {
   flex: 1;
   padding: 1.5rem;
@@ -20,28 +50,94 @@
   gap: 1.5rem;
 }
 
+/* Estilo dos widgets */
 .widget {
-  background-color: rgba(30, 30, 30, 0.7);
-  border-radius: 0.5rem;
+  background-color: var(--dark-card);
+  border-radius: 0.75rem;
   padding: 1.25rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-color);
 }
 
 .widget:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+  border-color: rgba(247, 147, 26, 0.3);
 }
 
+/* Estilo para preço do Bitcoin */
 .bitcoin-price {
   font-size: 2rem;
   font-weight: 700;
-  color: var(--primary-color);
+  color: var(--btc-orange);
+}
+
+/* Estilos para badge de status */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-badge-success {
+  background-color: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.status-badge-warning {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.status-badge-danger {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+/* Backgrounds com glows sutis */
+.glow-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  z-index: -1;
+  opacity: 0.5;
+}
+
+.orange-glow {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 100%;
+  background: radial-gradient(circle, rgba(247, 147, 26, 0.4) 0%, transparent 70%);
+  filter: blur(30px);
+  animation: float 10s infinite alternate ease-in-out;
+}
+
+@keyframes float {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(100px, 50px);
+  }
 }
 
 /* Media queries para responsividade */
 @media (max-width: 768px) {
   .dashboard-content {
     grid-template-columns: 1fr;
+  }
+  
+  .bitcoin-price {
+    font-size: 1.5rem;
   }
 }
