@@ -1,27 +1,41 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import './GaugeChart.css';
 import logger from '../../utils/logger';
 
 const GaugeChart = ({ 
-  score, 
-  title, 
-  classificacao, 
+  score = 5, // Default valor  
+  title = 'Score', 
+  classificacao,
   observacao,
   timeframe,
   size = 'medium'  // 'small', 'medium', 'large'
 }) => {
+  // Referência para o container do gráfico para debugging
+  const chartRef = useRef(null);
+
   // Determine as classes CSS com base no parâmetro size
   const containerClass = `gauge-container gauge-${size}`;
   const titleClass = `gauge-title gauge-title-${size}`;
   
   // Log quando o componente é renderizado
   useEffect(() => {
-    logger.debug('GaugeChart renderizado:', { 
+    logger.debug('GaugeChart renderizado com props:', { 
       score, title, timeframe, size,
       chartType: 'radialBar',
-      apexChartsLoaded: typeof ReactApexChart !== 'undefined'
+      apexChartsLoaded: typeof ReactApexChart !== 'undefined',
+      chartRefExists: chartRef.current !== null
     });
+
+    // Verificar se a biblioteca está disponível
+    if (typeof ReactApexChart === 'undefined') {
+      logger.error('ReactApexChart não está disponível. Verifique se a biblioteca foi carregada corretamente.');
+    }
+
+    // Verificar se o score está no formato correto
+    if (typeof score !== 'number') {
+      logger.warn(`Score inválido (${score}). Usando valor padrão 5.`);
+    }
   }, [score, title, timeframe, size]);
   
   // Define as cores com base no score
@@ -42,6 +56,19 @@ const GaugeChart = ({
         enabled: true
       },
       background: 'transparent',
+      animations: {
+        enabled: true,
+        easing: 'easeinout',
+        speed: 800,
+        animateGradually: {
+          enabled: true,
+          delay: 150
+        },
+        dynamicAnimation: {
+          enabled: true,
+          speed: 350
+        }
+      }
     },
     plotOptions: {
       radialBar: {
@@ -101,7 +128,7 @@ const GaugeChart = ({
       enabled: true,
       y: {
         formatter: function(value) {
-          return `Score: ${score}/10 - ${classificacao}`;
+          return `Score: ${score}/10 ${classificacao ? `- ${classificacao}` : ''}`;
         }
       }
     }
@@ -111,10 +138,28 @@ const GaugeChart = ({
   const series = [score * 10];
 
   // Log para debug com o valor da série e opções
-  logger.debug('GaugeChart config:', { series, color: getColor(score) });
+  logger.debug('GaugeChart config:', { series, color: getColor(score), options });
+
+  // Fallback para evitar erros em caso de problemas com a biblioteca
+  if (typeof ReactApexChart === 'undefined') {
+    return (
+      <div className={containerClass} ref={chartRef}>
+        <div className={titleClass}>
+          {timeframe && <span className="timeframe-badge">{timeframe}</span>}
+          {title && <h3>{title}</h3>}
+        </div>
+        <div className="chart-wrapper error-state">
+          <div className="chart-error">
+            Erro ao carregar o gráfico
+            <p>Score: {score}/10</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className={containerClass}>
+    <div className={containerClass} ref={chartRef}>
       <div className={titleClass}>
         {timeframe && <span className="timeframe-badge">{timeframe}</span>}
         {title && <h3>{title}</h3>}
