@@ -1,14 +1,24 @@
 import { useEffect, useState } from 'react'
 import './styles/App.css'
-import BTCTendenciaPanel from './components/BTCTendenciaPanel/BTCTendenciaPanel'
 import logger from './utils/logger'
+// Importando do barrel export
+import { BTCTendenciaPanel } from './components'
 
 function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [apexChartsLoaded, setApexChartsLoaded] = useState(false);
 
   useEffect(() => {
     logger.info('App montado - inicializando dashboard...');
+    
+    // Verificar se o ApexCharts está disponível
+    if (typeof window.ApexCharts !== 'undefined') {
+      setApexChartsLoaded(true);
+      logger.info('ApexCharts carregado com sucesso no componente App');
+    } else {
+      logger.error('ApexCharts não está disponível no componente App');
+    }
     
     // Monitor de status online/offline
     const handleOnlineStatus = () => {
@@ -75,6 +85,14 @@ function App() {
             </span>
           )}
         </div>
+        
+        {!apexChartsLoaded && (
+          <div className="library-status error">
+            <span className="status-message">
+              ⚠️ ApexCharts não carregado! Alguns gráficos podem não funcionar corretamente.
+            </span>
+          </div>
+        )}
       </header>
       
       <main className="container mx-auto">
