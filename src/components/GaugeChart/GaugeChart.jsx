@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import './GaugeChart.css';
 import logger from '../../utils/logger';
@@ -6,7 +6,7 @@ import logger from '../../utils/logger';
 const GaugeChart = ({ 
   score, 
   title, 
-  classification, 
+  classificacao, 
   observacao,
   timeframe,
   size = 'medium'  // 'small', 'medium', 'large'
@@ -15,8 +15,14 @@ const GaugeChart = ({
   const containerClass = `gauge-container gauge-${size}`;
   const titleClass = `gauge-title gauge-title-${size}`;
   
-  // Log quando o componente recebe novas props
-  logger.debug('GaugeChart renderizado:', { score, title, timeframe, size });
+  // Log quando o componente é renderizado
+  useEffect(() => {
+    logger.debug('GaugeChart renderizado:', { 
+      score, title, timeframe, size,
+      chartType: 'radialBar',
+      apexChartsLoaded: typeof ReactApexChart !== 'undefined'
+    });
+  }, [score, title, timeframe, size]);
   
   // Define as cores com base no score
   const getColor = (score) => {
@@ -24,7 +30,7 @@ const GaugeChart = ({
     if (score >= 5) return '#84cc16'; // Verde claro para tendência de alta moderada
     if (score >= 3) return '#f59e0b'; // Amarelo para neutro/indefinido
     if (score >= 1) return '#f97316'; // Laranja para tendência de baixa moderada
-    return '#ef4444';             // Vermelho para tendência de baixa forte
+    return '#ef4444';           // Vermelho para tendência de baixa forte
   };
 
   // Configura as opções do gráfico
@@ -95,7 +101,7 @@ const GaugeChart = ({
       enabled: true,
       y: {
         formatter: function(value) {
-          return `Score: ${score}/10 - ${classification}`;
+          return `Score: ${score}/10 - ${classificacao}`;
         }
       }
     }
@@ -103,6 +109,9 @@ const GaugeChart = ({
 
   // Converte o score para valor percentual (0-10 para 0-100)
   const series = [score * 10];
+
+  // Log para debug com o valor da série e opções
+  logger.debug('GaugeChart config:', { series, color: getColor(score) });
 
   return (
     <div className={containerClass}>
@@ -118,9 +127,9 @@ const GaugeChart = ({
           height={size === 'small' ? 180 : size === 'medium' ? 240 : 300}
         />
       </div>
-      {classification && (
-        <div className="gauge-classification">
-          <span style={{ color: getColor(score) }}>{classification}</span>
+      {classificacao && (
+        <div className="gauge-classificacao">
+          <span style={{ color: getColor(score) }}>{classificacao}</span>
         </div>
       )}
       {observacao && <div className="gauge-observacao">{observacao}</div>}
