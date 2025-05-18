@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './BTCTendenciaPanel.css';
-import GaugeChart from '../GaugeChart';
+import GaugeChart from '../GaugeChart/GaugeChart';
 import logger from '../../utils/logger';
 
 // Constantes para os timeframes
@@ -27,7 +27,7 @@ const BTCTendenciaPanel = () => {
     try {
       logger.info('Buscando dados de análise técnica...');
       const response = await axios.get('https://btc-turbo-api-production.up.railway.app/api/v1/analise-tecnica-emas');
-      logger.debug('Dados recebidos:', response.data);
+      logger.debug('Dados recebidos da API:', response.data);
       setData(response.data);
       setError(null);
     } catch (err) {
@@ -81,7 +81,8 @@ const BTCTendenciaPanel = () => {
 
   logger.renderLog('BTCTendenciaPanel', { 
     timeframes: Object.keys(selectedTimeframes).filter(k => selectedTimeframes[k]),
-    hasData: !!data 
+    hasData: !!data,
+    dataKeys: data ? Object.keys(data) : []
   });
 
   // Renderizar painel principal com os dados
@@ -105,7 +106,7 @@ const BTCTendenciaPanel = () => {
         </div>
         <div className="panel-actions">
           <button onClick={fetchData} className="refresh-button" title="Atualizar dados">
-            <span className="refresh-icon">↻</span>
+            <span className="refresh-icon">⟳</span>
           </button>
         </div>
       </div>
@@ -125,32 +126,35 @@ const BTCTendenciaPanel = () => {
 
       {/* Gráfico consolidado principal */}
       <div className="consolidated-gauge">
-        <GaugeChart
-          score={data?.consolidado.score || 0}
-          title="Tendência Bitcoin Consolidada"
-          classification={data?.consolidado.classificacao || ""}
-          observacao={data?.consolidado.racional || ""}
-          size="large"
-        />
+        {data?.consolidado && (
+          <GaugeChart
+            score={data.consolidado.score || 0}
+            title="Tendência Bitcoin Consolidada"
+            classificacao={data.consolidado.classificacao || ""}
+            observacao={data.consolidado.racional || ""}
+            size="large"
+          />
+        )}
       </div>
 
       {/* Gráficos por timeframe */}
       <div className="timeframe-gauges">
         {Object.keys(TIMEFRAMES)
           .filter(timeframe => selectedTimeframes[timeframe])
-          .map(timeframe => (
-            data?.emas[timeframe] && (
+          .map(timeframe => {
+            logger.debug(`Renderizando gauge para timeframe ${timeframe}`);
+            return data?.emas && data.emas[timeframe] && (
               <GaugeChart
                 key={timeframe}
                 score={data.emas[timeframe].analise.score || 0}
                 title={`Score de Tendência`}
                 timeframe={TIMEFRAMES[timeframe]}
-                classification={data.emas[timeframe].analise.classificacao || ""}
+                classificacao={data.emas[timeframe].analise.classificacao || ""}
                 observacao={data.emas[timeframe].analise.observacao || ""}
                 size="medium"
               />
-            )
-          ))
+            );
+          })
         }
       </div>
 
