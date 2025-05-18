@@ -125,7 +125,7 @@ const BTCTendenciaPanel = () => {
     fetchData();
     const interval = setInterval(fetchData, 60000); // atualiza a cada minuto
     return () => clearInterval(interval);
-  }, [useMockData]); // Re-fetch quando a fonte de dados mudar
+  }, [useMockData]); // Re-fetch quando a fonte de dados muda
 
   const handleTimeframeChange = (timeframe) => {
     logger.debug(`Mudando timeframe para: ${timeframe}`);
@@ -146,6 +146,15 @@ const BTCTendenciaPanel = () => {
     if (score >= 1.5) return 'BEARISH';
     return 'MUITO BEARISH';
   };
+
+  // Verifica se temos dados válidos para renderizar
+  const hasValidData = data && selectedTimeframe && data[selectedTimeframe];
+  
+  // Adiciona verificação se os objetos esperados existem
+  const hasEma9xEma21 = hasValidData && data[selectedTimeframe].ema9_x_ema21;
+  const hasPriceXEma9 = hasValidData && data[selectedTimeframe].price_x_ema9;
+  const hasPriceXEma21 = hasValidData && data[selectedTimeframe].price_x_ema21;
+  const hasGlobalTrend = hasValidData && data[selectedTimeframe].tendencia_global;
 
   return (
     <div className="btc-tendencia-panel">
@@ -193,54 +202,62 @@ const BTCTendenciaPanel = () => {
           <p>{error}</p>
           <button onClick={fetchData} className="retry-button">Tentar novamente</button>
         </div>
-      ) : data ? (
+      ) : hasValidData ? (
         <div className="gauge-container-grid">
-          {selectedTimeframe && data[selectedTimeframe] ? (
-            <>
-              {data[selectedTimeframe].ema9_x_ema21 && (
-                <GaugeChart
-                  title="EMA9 x EMA21"
-                  score={data[selectedTimeframe].ema9_x_ema21.score}
-                  classificacao={getClassificacao(data[selectedTimeframe].ema9_x_ema21.score)}
-                  timeframe={selectedTimeframe}
-                />
-              )}
-              
-              {data[selectedTimeframe].price_x_ema9 && (
-                <GaugeChart
-                  title="Preço x EMA9"
-                  score={data[selectedTimeframe].price_x_ema9.score}
-                  classificacao={getClassificacao(data[selectedTimeframe].price_x_ema9.score)}
-                  timeframe={selectedTimeframe}
-                />
-              )}
-              
-              {data[selectedTimeframe].price_x_ema21 && (
-                <GaugeChart
-                  title="Preço x EMA21"
-                  score={data[selectedTimeframe].price_x_ema21.score}
-                  classificacao={getClassificacao(data[selectedTimeframe].price_x_ema21.score)}
-                  timeframe={selectedTimeframe}
-                />
-              )}
-              
-              {data[selectedTimeframe].tendencia_global && (
-                <GaugeChart
-                  title="Tendência Global"
-                  score={data[selectedTimeframe].tendencia_global.score}
-                  classificacao={getClassificacao(data[selectedTimeframe].tendencia_global.score)}
-                  timeframe={selectedTimeframe}
-                />
-              )}
-            </>
-          ) : (
-            <div className="error">
-              Timeframe selecionado não disponível nos dados: {selectedTimeframe}
+          {/* Renderiza cada gráfico apenas se os dados correspondentes existirem */}
+          {hasEma9xEma21 && (
+            <div className="gauge-wrapper">
+              <GaugeChart
+                title="EMA9 x EMA21"
+                score={data[selectedTimeframe].ema9_x_ema21.score}
+                classificacao={getClassificacao(data[selectedTimeframe].ema9_x_ema21.score)}
+                timeframe={selectedTimeframe}
+              />
+            </div>
+          )}
+          
+          {hasPriceXEma9 && (
+            <div className="gauge-wrapper">
+              <GaugeChart
+                title="Preço x EMA9"
+                score={data[selectedTimeframe].price_x_ema9.score}
+                classificacao={getClassificacao(data[selectedTimeframe].price_x_ema9.score)}
+                timeframe={selectedTimeframe}
+              />
+            </div>
+          )}
+          
+          {hasPriceXEma21 && (
+            <div className="gauge-wrapper">
+              <GaugeChart
+                title="Preço x EMA21"
+                score={data[selectedTimeframe].price_x_ema21.score}
+                classificacao={getClassificacao(data[selectedTimeframe].price_x_ema21.score)}
+                timeframe={selectedTimeframe}
+              />
+            </div>
+          )}
+          
+          {hasGlobalTrend && (
+            <div className="gauge-wrapper">
+              <GaugeChart
+                title="Tendência Global"
+                score={data[selectedTimeframe].tendencia_global.score}
+                classificacao={getClassificacao(data[selectedTimeframe].tendencia_global.score)}
+                timeframe={selectedTimeframe}
+              />
+            </div>
+          )}
+            
+          {/* Mensagem de erro se não houver dados para algum gráfico esperado */}
+          {(!hasEma9xEma21 || !hasPriceXEma9 || !hasPriceXEma21 || !hasGlobalTrend) && (
+            <div className="error gauge-data-error">
+              Alguns indicadores não estão disponíveis para o timeframe: {selectedTimeframe}
             </div>
           )}
         </div>
       ) : (
-        <div className="error">Nenhum dado disponível</div>
+        <div className="error">Nenhum dado disponível para o timeframe: {selectedTimeframe}</div>
       )}
 
       <div className="debug-section">
