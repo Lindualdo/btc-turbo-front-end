@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import GaugeChart from '../GaugeChart/GaugeChart';
 import logger from '../../utils/logger';
@@ -9,73 +9,73 @@ const MOCK_DATA = {
   "1d": {
     "ema9_x_ema21": {
       "resultado": "BULL",
-      "score": 75
+      "score": 7.5
     },
     "price_x_ema9": {
       "resultado": "BULL",
-      "score": 85
+      "score": 8.5
     },
     "price_x_ema21": {
       "resultado": "BULL",
-      "score": 80
+      "score": 8.0
     },
     "tendencia_global": {
       "resultado": "BULL",
-      "score": 80
+      "score": 8.0
     }
   },
   "4h": {
     "ema9_x_ema21": {
       "resultado": "BULL",
-      "score": 65
+      "score": 6.5
     },
     "price_x_ema9": {
       "resultado": "BULL",
-      "score": 70
+      "score": 7.0
     },
     "price_x_ema21": {
       "resultado": "BULL",
-      "score": 75
+      "score": 7.5
     },
     "tendencia_global": {
       "resultado": "BULL",
-      "score": 70
+      "score": 7.0
     }
   },
   "1h": {
     "ema9_x_ema21": {
       "resultado": "BEAR",
-      "score": 40
+      "score": 4.0
     },
     "price_x_ema9": {
       "resultado": "BEAR",
-      "score": 35
+      "score": 3.5
     },
     "price_x_ema21": {
       "resultado": "BEAR",
-      "score": 30
+      "score": 3.0
     },
     "tendencia_global": {
       "resultado": "BEAR",
-      "score": 35
+      "score": 3.5
     }
   },
   "15m": {
     "ema9_x_ema21": {
       "resultado": "NEUTRO",
-      "score": 50
+      "score": 5.0
     },
     "price_x_ema9": {
       "resultado": "NEUTRO",
-      "score": 45
+      "score": 4.5
     },
     "price_x_ema21": {
       "resultado": "NEUTRO",
-      "score": 55
+      "score": 5.5
     },
     "tendencia_global": {
       "resultado": "NEUTRO",
-      "score": 50
+      "score": 5.0
     }
   }
 };
@@ -86,6 +86,7 @@ const BTCTendenciaPanel = () => {
   const [error, setError] = useState(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState('1d');
   const [useMockData, setUseMockData] = useState(true); // Use mock data flag
+  const apiCallCountRef = useRef(0);
 
   const fetchData = async () => {
     setLoading(true);
@@ -96,14 +97,25 @@ const BTCTendenciaPanel = () => {
         logger.info('Usando dados mockados para teste');
         setData(MOCK_DATA);
       } else {
-        logger.info('Buscando dados da API...');
-        const response = await axios.get('https://btc-turbo-api-production.up.railway.app/api/v1/analise-tecnica-emas');
+        apiCallCountRef.current += 1;
+        logger.info(`Buscando dados da API... (chamada #${apiCallCountRef.current})`);
+        
+        const response = await axios.get('https://btc-turbo-api-production.up.railway.app/api/v1/analise-tecnica-emas', {
+          timeout: 10000 // 10 segundos timeout
+        });
+        
         logger.debug('Dados recebidos da API:', response.data);
+        
+        // Verificar se os dados têm a estrutura esperada
+        if (!response.data || typeof response.data !== 'object') {
+          throw new Error('Formato de dados inválido recebido da API');
+        }
+        
         setData(response.data);
       }
     } catch (err) {
       logger.error('Erro ao buscar dados:', err);
-      setError('Falha ao carregar dados. Por favor, tente novamente mais tarde.');
+      setError(`Falha ao carregar dados: ${err.message || 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }
@@ -113,7 +125,7 @@ const BTCTendenciaPanel = () => {
     fetchData();
     const interval = setInterval(fetchData, 60000); // atualiza a cada minuto
     return () => clearInterval(interval);
-  }, []);
+  }, [useMockData]); // Re-fetch quando a fonte de dados mudar
 
   const handleTimeframeChange = (timeframe) => {
     logger.debug(`Mudando timeframe para: ${timeframe}`);
@@ -122,7 +134,17 @@ const BTCTendenciaPanel = () => {
 
   const toggleDataSource = () => {
     setUseMockData(!useMockData);
-    fetchData();
+  };
+
+  // Função para gerar classificação com base no score
+  const getClassificacao = (score) => {
+    if (score >= 7.5) return 'MUITO BULLISH';
+    if (score >= 6.0) return 'BULLISH';
+    if (score >= 5.0) return 'LEVEMENTE BULLISH';
+    if (score > 4.0) return 'NEUTRO';
+    if (score >= 3.0) return 'LEVEMENTE BEARISH';
+    if (score >= 1.5) return 'BEARISH';
+    return 'MUITO BEARISH';
   };
 
   return (
@@ -167,29 +189,55 @@ const BTCTendenciaPanel = () => {
       {loading ? (
         <div className="loading">Carregando dados...</div>
       ) : error ? (
-        <div className="error">{error}</div>
+        <div className="error">
+          <p>{error}</p>
+          <button onClick={fetchData} className="retry-button">Tentar novamente</button>
+        </div>
       ) : data ? (
-        <div className="gauge-container">
-          <GaugeChart
-            title="EMA9 x EMA21"
-            score={data[selectedTimeframe]?.ema9_x_ema21?.score || 0}
-            timeframe={selectedTimeframe}
-          />
-          <GaugeChart
-            title="Preço x EMA9"
-            score={data[selectedTimeframe]?.price_x_ema9?.score || 0}
-            timeframe={selectedTimeframe}
-          />
-          <GaugeChart
-            title="Preço x EMA21"
-            score={data[selectedTimeframe]?.price_x_ema21?.score || 0}
-            timeframe={selectedTimeframe}
-          />
-          <GaugeChart
-            title="Tendência Global"
-            score={data[selectedTimeframe]?.tendencia_global?.score || 0}
-            timeframe={selectedTimeframe}
-          />
+        <div className="gauge-container-grid">
+          {selectedTimeframe && data[selectedTimeframe] ? (
+            <>
+              {data[selectedTimeframe].ema9_x_ema21 && (
+                <GaugeChart
+                  title="EMA9 x EMA21"
+                  score={data[selectedTimeframe].ema9_x_ema21.score}
+                  classificacao={getClassificacao(data[selectedTimeframe].ema9_x_ema21.score)}
+                  timeframe={selectedTimeframe}
+                />
+              )}
+              
+              {data[selectedTimeframe].price_x_ema9 && (
+                <GaugeChart
+                  title="Preço x EMA9"
+                  score={data[selectedTimeframe].price_x_ema9.score}
+                  classificacao={getClassificacao(data[selectedTimeframe].price_x_ema9.score)}
+                  timeframe={selectedTimeframe}
+                />
+              )}
+              
+              {data[selectedTimeframe].price_x_ema21 && (
+                <GaugeChart
+                  title="Preço x EMA21"
+                  score={data[selectedTimeframe].price_x_ema21.score}
+                  classificacao={getClassificacao(data[selectedTimeframe].price_x_ema21.score)}
+                  timeframe={selectedTimeframe}
+                />
+              )}
+              
+              {data[selectedTimeframe].tendencia_global && (
+                <GaugeChart
+                  title="Tendência Global"
+                  score={data[selectedTimeframe].tendencia_global.score}
+                  classificacao={getClassificacao(data[selectedTimeframe].tendencia_global.score)}
+                  timeframe={selectedTimeframe}
+                />
+              )}
+            </>
+          ) : (
+            <div className="error">
+              Timeframe selecionado não disponível nos dados: {selectedTimeframe}
+            </div>
+          )}
         </div>
       ) : (
         <div className="error">Nenhum dado disponível</div>
