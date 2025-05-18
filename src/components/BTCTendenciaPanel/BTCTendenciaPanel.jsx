@@ -1,121 +1,75 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import GaugeChart from '../GaugeChart/GaugeChart';
 import logger from '../../utils/logger';
-import './BTCTendenciaPanel.css';
-
-// Dados mockados para teste
-const MOCK_DATA = {
-  "1d": {
-    "ema9_x_ema21": {
-      "resultado": "BULL",
-      "score": 7.5
-    },
-    "price_x_ema9": {
-      "resultado": "BULL",
-      "score": 8.5
-    },
-    "price_x_ema21": {
-      "resultado": "BULL",
-      "score": 8.0
-    },
-    "tendencia_global": {
-      "resultado": "BULL",
-      "score": 8.0
-    }
-  },
-  "4h": {
-    "ema9_x_ema21": {
-      "resultado": "BULL",
-      "score": 6.5
-    },
-    "price_x_ema9": {
-      "resultado": "BULL",
-      "score": 7.0
-    },
-    "price_x_ema21": {
-      "resultado": "BULL",
-      "score": 7.5
-    },
-    "tendencia_global": {
-      "resultado": "BULL",
-      "score": 7.0
-    }
-  },
-  "1h": {
-    "ema9_x_ema21": {
-      "resultado": "BEAR",
-      "score": 4.0
-    },
-    "price_x_ema9": {
-      "resultado": "BEAR",
-      "score": 3.5
-    },
-    "price_x_ema21": {
-      "resultado": "BEAR",
-      "score": 3.0
-    },
-    "tendencia_global": {
-      "resultado": "BEAR",
-      "score": 3.5
-    }
-  },
-  "15m": {
-    "ema9_x_ema21": {
-      "resultado": "NEUTRO",
-      "score": 5.0
-    },
-    "price_x_ema9": {
-      "resultado": "NEUTRO",
-      "score": 4.5
-    },
-    "price_x_ema21": {
-      "resultado": "NEUTRO",
-      "score": 5.5
-    },
-    "tendencia_global": {
-      "resultado": "NEUTRO",
-      "score": 5.0
-    }
-  }
-};
+import { DebugData } from '../DebugData/DebugData';
 
 const BTCTendenciaPanel = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedTimeframe, setSelectedTimeframe] = useState('1d');
-  const [useMockData, setUseMockData] = useState(true); // Use mock data flag
-  const apiCallCountRef = useRef(0);
+
+  const API_URL = 'https://btc-turbo-api-production.up.railway.app/api/v1/analise-tecnica-emas';
+
+  // Função mock para testes quando a API não estiver disponível
+  const getMockData = () => {
+    return {
+      "date": "2023-05-10",
+      "price": 27500,
+      "ema9": 27200,
+      "ema21": 27000,
+      "ema55": 26800,
+      "ema200": 26000,
+      "tendencia_curto_prazo": 85,
+      "tendencia_medio_prazo": 75,
+      "tendencia_longo_prazo": 60
+    };
+  };
 
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      if (useMockData) {
-        logger.info('Usando dados mockados para teste');
-        setData(MOCK_DATA);
-      } else {
-        apiCallCountRef.current += 1;
-        logger.info(`Buscando dados da API... (chamada #${apiCallCountRef.current})`);
-        
-        const response = await axios.get('https://btc-turbo-api-production.up.railway.app/api/v1/analise-tecnica-emas', {
-          timeout: 10000 // 10 segundos timeout
-        });
-        
-        logger.debug('Dados recebidos da API:', response.data);
-        
-        // Verificar se os dados têm a estrutura esperada
-        if (!response.data || typeof response.data !== 'object') {
-          throw new Error('Formato de dados inválido recebido da API');
+      // Configuração avançada do Axios
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos de timeout
+      
+      const response = await axios.get(API_URL, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
         }
-        
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.status === 200 && response.data) {
+        logger.debug('Dados recebidos da API:', response.data);
         setData(response.data);
+      } else {
+        throw new Error(`Resposta inválida. Status: ${response.status}`);
       }
     } catch (err) {
-      logger.error('Erro ao buscar dados:', err);
-      setError(`Falha ao carregar dados: ${err.message || 'Erro desconhecido'}`);
+      logger.error('Erro ao buscar dados da API:', err);
+      
+      if (err.name === 'AbortError') {
+        setError('Timeout ao acessar a API. Por favor, tente novamente mais tarde.');
+      } else if (err.response) {
+        // Erro de resposta da API (4xx, 5xx)
+        setError(`Erro ${err.response.status}: ${err.response.statusText}`);
+      } else if (err.request) {
+        // Requisição feita mas sem resposta
+        setError('Servidor não respondeu. Verificando dados alternativos...');
+        
+        // Usar dados mockados como fallback
+        setData(getMockData());
+        logger.info('Usando dados mockados como fallback');
+      } else {
+        // Erro na configuração da requisição
+        setError(`Erro ao configurar requisição: ${err.message}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -123,151 +77,78 @@ const BTCTendenciaPanel = () => {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 60000); // atualiza a cada minuto
-    return () => clearInterval(interval);
-  }, [useMockData]); // Re-fetch quando a fonte de dados muda
+    
+    // Atualizar a cada 5 minutos
+    const intervalId = setInterval(fetchData, 5 * 60 * 1000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
 
-  const handleTimeframeChange = (timeframe) => {
-    logger.debug(`Mudando timeframe para: ${timeframe}`);
-    setSelectedTimeframe(timeframe);
-  };
-
-  const toggleDataSource = () => {
-    setUseMockData(!useMockData);
-  };
-
-  // Função para gerar classificação com base no score
-  const getClassificacao = (score) => {
-    if (score >= 7.5) return 'MUITO BULLISH';
-    if (score >= 6.0) return 'BULLISH';
-    if (score >= 5.0) return 'LEVEMENTE BULLISH';
-    if (score > 4.0) return 'NEUTRO';
-    if (score >= 3.0) return 'LEVEMENTE BEARISH';
-    if (score >= 1.5) return 'BEARISH';
-    return 'MUITO BEARISH';
-  };
-
-  // Verifica se temos dados válidos para renderizar
-  const hasValidData = data && selectedTimeframe && data[selectedTimeframe];
-  
-  // Adiciona verificação se os objetos esperados existem
-  const hasEma9xEma21 = hasValidData && data[selectedTimeframe].ema9_x_ema21;
-  const hasPriceXEma9 = hasValidData && data[selectedTimeframe].price_x_ema9;
-  const hasPriceXEma21 = hasValidData && data[selectedTimeframe].price_x_ema21;
-  const hasGlobalTrend = hasValidData && data[selectedTimeframe].tendencia_global;
+  // Verificar disponibilidade do CORS fazendo uma requisição OPTIONS
+  useEffect(() => {
+    const checkCORS = async () => {
+      try {
+        await axios({
+          method: 'OPTIONS',
+          url: API_URL,
+          timeout: 5000
+        });
+        logger.info('CORS está configurado corretamente');
+      } catch (err) {
+        logger.warn('Possível problema de CORS detectado:', err.message);
+      }
+    };
+    
+    checkCORS();
+  }, []);
 
   return (
-    <div className="btc-tendencia-panel">
-      <div className="panel-header">
-        <h2>Análise de Tendência BTC</h2>
-        <div className="timeframe-selector">
-          <button
-            className={selectedTimeframe === '15m' ? 'active' : ''}
-            onClick={() => handleTimeframeChange('15m')}
-          >
-            15m
-          </button>
-          <button
-            className={selectedTimeframe === '1h' ? 'active' : ''}
-            onClick={() => handleTimeframeChange('1h')}
-          >
-            1h
-          </button>
-          <button
-            className={selectedTimeframe === '4h' ? 'active' : ''}
-            onClick={() => handleTimeframeChange('4h')}
-          >
-            4h
-          </button>
-          <button
-            className={selectedTimeframe === '1d' ? 'active' : ''}
-            onClick={() => handleTimeframeChange('1d')}
-          >
-            1d
-          </button>
+    <div className="bg-gray-800 rounded-lg p-4 shadow-md h-full">
+      <h2 className="text-xl font-bold text-white mb-4">Tendência BTC</h2>
+      
+      {loading && (
+        <div className="flex justify-center items-center h-48">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
-      </div>
-
-      <div className="debug-panel">
-        <h3>Usando: {useMockData ? 'Dados Mockados' : 'Dados da API'}</h3>
-        <button onClick={toggleDataSource}>
-          Alternar fonte de dados
-        </button>
-      </div>
-
-      {loading ? (
-        <div className="loading">Carregando dados...</div>
-      ) : error ? (
-        <div className="error">
-          <p>{error}</p>
-          <button onClick={fetchData} className="retry-button">Tentar novamente</button>
-        </div>
-      ) : hasValidData ? (
-        <div className="gauge-container-grid">
-          {/* Renderiza cada gráfico apenas se os dados correspondentes existirem */}
-          {hasEma9xEma21 && (
-            <div className="gauge-wrapper">
-              <GaugeChart
-                title="EMA9 x EMA21"
-                score={data[selectedTimeframe].ema9_x_ema21.score}
-                classificacao={getClassificacao(data[selectedTimeframe].ema9_x_ema21.score)}
-                timeframe={selectedTimeframe}
-              />
-            </div>
-          )}
-          
-          {hasPriceXEma9 && (
-            <div className="gauge-wrapper">
-              <GaugeChart
-                title="Preço x EMA9"
-                score={data[selectedTimeframe].price_x_ema9.score}
-                classificacao={getClassificacao(data[selectedTimeframe].price_x_ema9.score)}
-                timeframe={selectedTimeframe}
-              />
-            </div>
-          )}
-          
-          {hasPriceXEma21 && (
-            <div className="gauge-wrapper">
-              <GaugeChart
-                title="Preço x EMA21"
-                score={data[selectedTimeframe].price_x_ema21.score}
-                classificacao={getClassificacao(data[selectedTimeframe].price_x_ema21.score)}
-                timeframe={selectedTimeframe}
-              />
-            </div>
-          )}
-          
-          {hasGlobalTrend && (
-            <div className="gauge-wrapper">
-              <GaugeChart
-                title="Tendência Global"
-                score={data[selectedTimeframe].tendencia_global.score}
-                classificacao={getClassificacao(data[selectedTimeframe].tendencia_global.score)}
-                timeframe={selectedTimeframe}
-              />
-            </div>
-          )}
-            
-          {/* Mensagem de erro se não houver dados para algum gráfico esperado */}
-          {(!hasEma9xEma21 || !hasPriceXEma9 || !hasPriceXEma21 || !hasGlobalTrend) && (
-            <div className="error gauge-data-error">
-              Alguns indicadores não estão disponíveis para o timeframe: {selectedTimeframe}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="error">Nenhum dado disponível para o timeframe: {selectedTimeframe}</div>
       )}
-
-      <div className="debug-section">
-        <h4>Dados brutos da API (Debug):</h4>
-        {data ? (
-          <pre>{JSON.stringify(data, null, 2)}</pre>
-        ) : (
-          <p>Nenhum dado recebido</p>
-        )}
-      </div>
+      
+      {error && (
+        <div className="bg-red-800 bg-opacity-30 border border-red-500 text-red-200 p-3 rounded-md mb-4">
+          <p className="font-medium">{error}</p>
+        </div>
+      )}
+      
+      {data && !loading && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div>
+            <h3 className="text-center text-gray-300 mb-2">Curto Prazo</h3>
+            <GaugeChart 
+              value={data.tendencia_curto_prazo} 
+              title="Curto Prazo"
+            />
+          </div>
+          <div>
+            <h3 className="text-center text-gray-300 mb-2">Médio Prazo</h3>
+            <GaugeChart 
+              value={data.tendencia_medio_prazo} 
+              title="Médio Prazo"
+            />
+          </div>
+          <div>
+            <h3 className="text-center text-gray-300 mb-2">Longo Prazo</h3>
+            <GaugeChart 
+              value={data.tendencia_longo_prazo} 
+              title="Longo Prazo"
+            />
+          </div>
+        </div>
+      )}
+      
+      {/* Seção de debug para verificar se os dados estão chegando */}
+      <DebugData
+        title="Dados brutos da API (Debug):"
+        data={data}
+      />
     </div>
   );
 };
