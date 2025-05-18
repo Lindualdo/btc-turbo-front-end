@@ -29,13 +29,18 @@ const GaugeChart = ({
 
     // Verificar se a biblioteca está disponível
     if (typeof ReactApexChart === 'undefined') {
-      logger.error('ReactApexChart não está disponível. Verifique se a biblioteca foi carregada corretamente.');
+      logger.error('ReactApexChart não está disponível');
     }
 
     // Verificar se o score está no formato correto
     if (typeof score !== 'number') {
       logger.warn(`Score inválido (${score}). Usando valor padrão 5.`);
     }
+
+    // Registrar informação de montagem do componente
+    return () => {
+      logger.debug('GaugeChart desmontado:', { title, timeframe });
+    };
   }, [score, title, timeframe, size]);
   
   // Define as cores com base no score
@@ -158,6 +163,13 @@ const GaugeChart = ({
     );
   }
 
+  // Adicionar um elemento simples para debugging se estiver em dev
+  const debugElement = process.env.NODE_ENV !== 'production' ? (
+    <div className="debug-info">
+      Chart: {typeof ReactApexChart} | Score: {score} | Color: {getColor(score)}
+    </div>
+  ) : null;
+
   return (
     <div className={containerClass} ref={chartRef}>
       <div className={titleClass}>
@@ -178,6 +190,7 @@ const GaugeChart = ({
         </div>
       )}
       {observacao && <div className="gauge-observacao">{observacao}</div>}
+      {debugElement}
     </div>
   );
 };
