@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import GaugeChart from '../GaugeChart';
-import { logger } from '../../utils/logger';
+import logger from '../../utils/logger'; // Corrigida a importação
 import './BTCTendenciaPanel.css';
 
 const BTCTendenciaPanel = () => {
