@@ -85,20 +85,54 @@
   z-index: 2;
 }
 
-.gauge-classification {
+.gauge-classificacao {
   text-align: center;
   font-weight: 600;
   margin-top: 10px;
   font-size: 1.125rem;
 }
 
-.gauge-observation {
+.gauge-observacao {
   margin-top: 8px;
   font-size: 0.875rem;
   color: #9ca3af;
   text-align: center;
   padding: 0 10px;
   font-style: italic;
+}
+
+/* Estado de erro para o gráfico */
+.chart-wrapper.error-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 180px;
+  background-color: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  border: 1px dashed rgba(239, 68, 68, 0.5);
+}
+
+.chart-error {
+  text-align: center;
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.chart-error p {
+  margin-top: 8px;
+  font-size: 1.25rem;
+  color: #f7f7f7;
+}
+
+/* Debug info */
+.debug-info {
+  margin-top: 10px;
+  padding: 8px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  word-break: break-all;
 }
 
 /* Responsividade */
