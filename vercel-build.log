@@ -1,0 +1,41 @@
+Para visualizar logs detalhados de build e runtime na Vercel, siga estes passos:
+
+## Logs de Build:
+1. Acesse o painel da Vercel (vercel.com/dashboard)
+2. Selecione o projeto btc-turbo-front-end
+3. Vá para a tab "Deployments" 
+4. Clique no último deployment
+5. Clique em "View Build Logs" ou "Build"
+
+## Logs de Runtime:
+1. Na mesma tela de detalhes do deployment
+2. Vá para a tab "Runtime Logs"
+3. Clique em "View Function Logs" se disponível
+
+## Ativando logs persistentes:
+1. Acesse as configurações do projeto
+2. Seção "Functions"
+3. Encontre "Debug Logs"
+4. Ative a opção "Persistent Logs"
+
+## Visualizando logs via CLI Vercel:
+```bash
+# Instalar CLI da Vercel
+npm i -g vercel
+
+# Login 
+vercel login
+
+# Visualizar logs
+vercel logs btc-turbo-front-end
+
+# Logs em tempo real
+vercel logs btc-turbo-front-end --follow
+```
+
+Além disso, as mensagens de log adicionadas via utility `logger.js` devem aparecer no console do navegador e podem ser verificadas nas ferramentas de desenvolvedor (F12 > Console).
+
+Diagnósticos adicionais:
+- Verifique a aba Network nas ferramentas do desenvolvedor para confirmar se as requisições para a API estão funcionando
+- Verifique se há erros CORS na comunicação com a API
+- Confirme que a versão das dependências está correta, especialmente react-apexcharts
