@@ -1,172 +1,141 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import GaugeChart from '../GaugeChart';
+import { logger } from '../../utils/logger';
 import './BTCTendenciaPanel.css';
-import GaugeChart from '../GaugeChart/GaugeChart';
-import logger from '../../utils/logger';
-
-// Constantes para os timeframes
-const TIMEFRAMES = {
-  '15m': '15 minutos',
-  '1h': '1 hora',
-  '4h': '4 horas',
-  '1d': '1 dia',
-  '1w': '1 semana'
-};
 
 const BTCTendenciaPanel = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedTimeframes, setSelectedTimeframes] = useState(
-    Object.keys(TIMEFRAMES).reduce((acc, tf) => ({ ...acc, [tf]: true }), {})
-  );
+  const [selectedTimeFrames, setSelectedTimeFrames] = useState(['15m', '1h', '4h', '1d', '1w']);
 
-  // Função para buscar dados da API
   const fetchData = async () => {
-    setLoading(true);
     try {
-      logger.info('Buscando dados de análise técnica...');
+      logger.info('Iniciando chamada à API de análise técnica de EMAs');
+      setLoading(true);
       const response = await axios.get('https://btc-turbo-api-production.up.railway.app/api/v1/analise-tecnica-emas');
       logger.debug('Dados recebidos da API:', response.data);
       setData(response.data);
       setError(null);
     } catch (err) {
-      logger.error('Erro ao buscar dados de tendência:', err);
-      setError('Falha ao carregar dados de tendência. Por favor, tente novamente.');
+      logger.error('Erro ao buscar dados da API:', err);
+      setError('Falha ao carregar dados. Por favor, tente novamente mais tarde.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Efeito para buscar dados ao carregar o componente
   useEffect(() => {
+    logger.debug('BTCTendenciaPanel montado');
     fetchData();
-
-    // Atualizar dados a cada 5 minutos
-    const interval = setInterval(fetchData, 300000);
     
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      logger.info('Atualizando dados da API (intervalo de 5 minutos)');
+      fetchData();
+    }, 5 * 60 * 1000);
+
+    return () => {
+      logger.debug('BTCTendenciaPanel desmontado, limpando intervalo');
+      clearInterval(interval);
+    };
   }, []);
 
-  // Alternar seleção de timeframe
-  const toggleTimeframe = (timeframe) => {
-    setSelectedTimeframes(prev => ({
-      ...prev,
-      [timeframe]: !prev[timeframe]
-    }));
+  const toggleTimeFrame = (timeFrame) => {
+    logger.debug(`Toggle timeframe: ${timeFrame}`);
+    setSelectedTimeFrames((prev) =>
+      prev.includes(timeFrame)
+        ? prev.filter((tf) => tf !== timeFrame)
+        : [...prev, timeFrame]
+    );
   };
 
-  // Renderizar painel de carregamento
-  if (loading && !data) {
+  // Função para renderizar um gauge baseado no timeframe
+  const renderGauge = (timeFrame, title) => {
+    if (!data || !data.emas || !data.emas[timeFrame]) return null;
+    
+    const { score, classificacao, observacao } = data.emas[timeFrame].analise;
+    logger.debug(`Renderizando gauge para ${timeFrame} com score ${score}`);
+    
     return (
-      <div className="btc-tendencia-panel loading">
-        <div className="loading-spinner"></div>
-        <p>Carregando análise de tendência...</p>
+      <div className="gauge-container">
+        <GaugeChart
+          score={score}
+          title={title}
+          timeframe={timeFrame}
+          classificacao={classificacao}
+          observacao={observacao}
+          size="medium"
+        />
       </div>
     );
-  }
+  };
 
-  // Renderizar painel de erro
-  if (error) {
-    return (
-      <div className="btc-tendencia-panel error">
-        <div className="error-icon">⚠️</div>
-        <p>{error}</p>
-        <button onClick={fetchData} className="retry-button">
-          Tentar novamente
-        </button>
-      </div>
-    );
-  }
-
-  logger.renderLog('BTCTendenciaPanel', { 
-    timeframes: Object.keys(selectedTimeframes).filter(k => selectedTimeframes[k]),
-    hasData: !!data,
-    dataKeys: data ? Object.keys(data) : []
-  });
-
-  // Renderizar painel principal com os dados
   return (
     <div className="btc-tendencia-panel">
-      <div className="panel-header">
-        <div className="panel-title">
-          <h2>Análise de Tendência BTC</h2>
-          <p className="price-info">
-            <span className="price-label">Preço Atual:</span>
-            <span className="price-value">${data?.preco_atual.toLocaleString('en-US', { 
-              minimumFractionDigits: 2, 
-              maximumFractionDigits: 2 
-            })}</span>
-            <span className="volume-label">Volume 24h:</span>
-            <span className="volume-value">{data?.volume_atual.toLocaleString('en-US', { 
-              minimumFractionDigits: 2, 
-              maximumFractionDigits: 2 
-            })} BTC</span>
-          </p>
-        </div>
-        <div className="panel-actions">
-          <button onClick={fetchData} className="refresh-button" title="Atualizar dados">
-            <span className="refresh-icon">⟳</span>
-          </button>
-        </div>
+      <h1>Análise de Tendência de Alta do Bitcoin</h1>
+      
+      {loading && <div className="loading">Carregando dados...</div>}
+      
+      {error && <div className="error">{error}</div>}
+      
+      {/* DEBUG: Exibindo dados brutos recebidos da API */}
+      <div className="debug-data" style={{ margin: '20px', padding: '10px', background: '#f0f0f0', borderRadius: '5px', maxHeight: '200px', overflow: 'auto', whiteSpace: 'pre-wrap', textAlign: 'left', fontSize: '12px', color: 'black' }}>
+        <h3>Dados brutos da API (Debug):</h3>
+        {data ? JSON.stringify(data, null, 2) : 'Nenhum dado recebido'}
       </div>
+      
+      {data && (
+        <>
+          <div className="price-info">
+            <div className="current-price">
+              <span className="label">Preço Atual:</span>
+              <span className="value">${data.preco_atual?.toLocaleString()}</span>
+            </div>
+            <div className="current-volume">
+              <span className="label">Volume:</span>
+              <span className="value">{data.volume_atual?.toFixed(2)} BTC</span>
+            </div>
+          </div>
 
-      {/* Filtro de timeframes */}
-      <div className="timeframe-filters">
-        {Object.entries(TIMEFRAMES).map(([key, label]) => (
-          <button
-            key={key}
-            className={`timeframe-filter ${selectedTimeframes[key] ? 'active' : ''}`}
-            onClick={() => toggleTimeframe(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* Gráfico consolidado principal */}
-      <div className="consolidated-gauge">
-        {data?.consolidado && (
-          <GaugeChart
-            score={data.consolidado.score || 0}
-            title="Tendência Bitcoin Consolidada"
-            classificacao={data.consolidado.classificacao || ""}
-            observacao={data.consolidado.racional || ""}
-            size="large"
-          />
-        )}
-      </div>
-
-      {/* Gráficos por timeframe */}
-      <div className="timeframe-gauges">
-        {Object.keys(TIMEFRAMES)
-          .filter(timeframe => selectedTimeframes[timeframe])
-          .map(timeframe => {
-            logger.debug(`Renderizando gauge para timeframe ${timeframe}`);
-            return data?.emas && data.emas[timeframe] && (
+          <div className="consolidated-gauge">
+            <h2>Tendência Geral</h2>
+            {data.consolidado && (
               <GaugeChart
-                key={timeframe}
-                score={data.emas[timeframe].analise.score || 0}
-                title={`Score de Tendência`}
-                timeframe={TIMEFRAMES[timeframe]}
-                classificacao={data.emas[timeframe].analise.classificacao || ""}
-                observacao={data.emas[timeframe].analise.observacao || ""}
-                size="medium"
+                score={data.consolidado.score}
+                title="Consolidado"
+                timeframe="consolidado"
+                classificacao={data.consolidado.classificacao}
+                observacao={data.consolidado.racional}
+                size="large"
               />
-            );
-          })
-        }
-      </div>
+            )}
+          </div>
 
-      {/* Rodapé com informações adicionais */}
-      <div className="panel-footer">
-        <div className="data-timestamp">
-          Última atualização: {new Date().toLocaleString()}
-        </div>
-        <div className="data-hint">
-          * O score é calculado com base no alinhamento das EMAs e posição do preço
-        </div>
-      </div>
+          <div className="timeframe-filters">
+            <h3>Filtrar Timeframes:</h3>
+            <div className="filter-buttons">
+              {['15m', '1h', '4h', '1d', '1w'].map((tf) => (
+                <button
+                  key={tf}
+                  className={`filter-btn ${selectedTimeFrames.includes(tf) ? 'active' : ''}`}
+                  onClick={() => toggleTimeFrame(tf)}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="timeframe-gauges">
+            {selectedTimeFrames.includes('15m') && renderGauge('15m', '15 Minutos')}
+            {selectedTimeFrames.includes('1h') && renderGauge('1h', '1 Hora')}
+            {selectedTimeFrames.includes('4h') && renderGauge('4h', '4 Horas')}
+            {selectedTimeFrames.includes('1d') && renderGauge('1d', '1 Dia')}
+            {selectedTimeFrames.includes('1w') && renderGauge('1w', '1 Semana')}
+          </div>
+        </>
+      )}
     </div>
   );
 };
