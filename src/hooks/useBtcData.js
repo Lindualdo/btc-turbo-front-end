@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://btc-turbo-api-production.up.railway.app';
 
 export const useBtcData = () => {
   const [data, setData] = useState(null);
@@ -11,7 +11,7 @@ export const useBtcData = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/api/bitcoin/metrics`);
+      const response = await axios.get(`${API_BASE_URL}/api/v1/analise-tecnica-emas`);
       setData(response.data);
       setError(null);
     } catch (err) {
